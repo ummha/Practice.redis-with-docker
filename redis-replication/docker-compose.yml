@@ -1,0 +1,61 @@
+services:
+  master:
+    image: redis
+    hostname: redis-master
+    container_name: repl-master
+    restart: always
+    environment:
+      - TZ=Asia/Seoul
+    volumes:
+      - ./master/redis.conf:/usr/local/etc/redis/redis.conf
+      - ./master:/data
+    ports:
+      - 8001:6379
+    networks:
+      - redis-replication-net
+    command: redis-server /usr/local/etc/redis/redis.conf
+    
+  replica-1:
+    image: redis
+    hostname: redis-slave-1
+    container_name: repl-slave-1
+    depends_on:
+      - master
+    restart: on-failure:5
+    ports:
+      - 8002:6379
+    environment:
+      - TZ=Asia/Seoul
+    volumes:
+      - ./slave-1/redis.conf:/usr/local/etc/redis/redis.conf
+      - ./slave-1:/data
+    networks:
+      - redis-replication-net
+    command: redis-server /usr/local/etc/redis/redis.conf
+
+  replica-2:
+    image: redis
+    hostname: redis-slave-2
+    container_name: repl-slave-2
+    depends_on:
+      - master
+    restart: on-failure:5
+    ports:
+      - 8003:6379
+    environment:
+      - TZ=Asia/Seoul
+    volumes:
+      - ./slave-2/redis.conf:/usr/local/etc/redis/redis.conf
+      - ./slave-2:/data
+    networks:
+      - redis-replication-net
+    command: redis-server /usr/local/etc/redis/redis.conf
+
+networks:
+  redis-replication-net:
+    driver: bridge
+
+# no: 컨테이너가 중지되면 재시작하지 않음.
+# always: 컨테이너가 중지될 때마다 항상 재시작.
+#	on-failure: 컨테이너가 비정상 종료 시에만 재시작.
+#	unless-stopped: 컨테이너가 중지될 때마다 항상 재시작하되, 수동으로 중지된 경우는 제외.

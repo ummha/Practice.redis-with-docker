@@ -1,0 +1,101 @@
+services:
+  master:
+    image: redis:7.2.5-alpine
+    container_name: redis-master
+    restart: always
+    environment:
+      - TZ=Asia/Seoul
+    volumes:
+      - ./redis-master.conf:/usr/local/etc/redis/redis.conf
+      - ./master:/data
+    networks:
+      - redis-sentinel-net
+    ports:
+      - "6379:6379"
+    command: redis-server /usr/local/etc/redis/redis.conf
+  
+  replica-1:
+    image: redis:7.2.5-alpine
+    container_name: redis-slave-1
+    depends_on:
+      - master
+    restart: on-failure:5
+    environment:
+      - TZ=Asia/Seoul
+    volumes:
+      - ./redis-slave-1.conf:/usr/local/etc/redis/redis.conf
+      - ./slave-1:/data
+    networks:
+      - redis-sentinel-net
+    command: redis-server /usr/local/etc/redis/redis.conf
+
+  replica-2:
+    image: redis:7.2.5-alpine
+    container_name: redis-slave-2
+    depends_on:
+      - master
+    restart: on-failure:5
+    environment:
+      - TZ=Asia/Seoul
+    volumes:
+      - ./redis-slave-2.conf:/usr/local/etc/redis/redis.conf
+      - ./slave-2:/data
+    networks:
+      - redis-sentinel-net
+    command: redis-server /usr/local/etc/redis/redis.conf
+
+  sentinel-1:
+    image: redis:7.2.5-alpine
+    container_name: sentinel-1
+    environment:
+      - TZ=Asia/Seoul
+    volumes:
+      - ./sentinel-1/config:/usr/local/etc/redis
+#      - ./sentinel-1.conf:/usr/local/etc/redis/sentinel.conf
+#      - ./sentinel-1/data:/data
+    networks:
+      - redis-sentinel-net
+    command: redis-server /usr/local/etc/redis/sentinel.conf --sentinel
+    depends_on:
+      - master
+      - replica-1
+      - replica-2
+
+  sentinel-2:
+    #image: redis:7.2.5-alpine
+    image: redis:7.2.5-alpine
+    container_name: sentinel-2
+    environment:
+      - TZ=Asia/Seoul
+    volumes:
+      - ./sentinel-2/config:/usr/local/etc/redis
+#      - ./sentinel-2.conf:/usr/local/etc/redis/sentinel.conf
+      - ./sentinel-2/data:/data
+    networks:
+      - redis-sentinel-net
+    command: redis-sentinel /usr/local/etc/redis/sentinel.conf
+    depends_on:
+      - master
+      - replica-1
+      - replica-2
+
+  sentinel-3:
+    image: redis:7.2.5-alpine
+    container_name: sentinel-3
+    environment:
+      - TZ=Asia/Seoul
+    volumes:
+      - ./sentinel-3/config:/usr/local/etc/redis
+#      - ./sentinel-3.conf:/usr/local/etc/redis/sentinel.conf
+#      - ./sentinel-3/data:/data
+    networks:
+      - redis-sentinel-net
+    command: redis-server /usr/local/etc/redis/sentinel.conf --sentinel
+    depends_on:
+      - master
+      - replica-1
+      - replica-2
+
+networks:
+  redis-sentinel-net:
+    driver: bridge
